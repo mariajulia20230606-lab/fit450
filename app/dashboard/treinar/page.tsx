@@ -54,6 +54,8 @@ export default function Treinar() {
   const [rodando, setRodando] = useState(false)
   const [concluido, setConcluido] = useState(false)
   const timerRef = useRef<number | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // Carregar dados do Supabase
   useEffect(() => {
@@ -124,6 +126,13 @@ export default function Treinar() {
     }
   }, [rodando])
 
+  // Efeito sonoro para os últimos 10 segundos
+  useEffect(() => {
+    if (rodando && tempo <= 10 && tempo > 0) {
+      tocarBeep()
+    }
+  }, [tempo, rodando])
+
   if (!chartConfig) return <div className="p-8 text-center">Carregando dados do treino...</div>
 
   const targetLevelConfig = getLevelByIndex(targetLevelIndex)
@@ -147,6 +156,14 @@ export default function Treinar() {
   }
 
   const iniciar = () => {
+    // Criar contexto de áudio na primeira interação do usuário
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+    // Criar elemento de áudio como backup
+    if (!audioRef.current) {
+      audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmFgU7k9n1unEiBC13yO/eizEIHWq+8+OWT')
+    }
     setTempo(chartConfig.timings[indiceAtual])
     setRodando(true)
   }
@@ -235,6 +252,42 @@ export default function Treinar() {
     const m = Math.floor(s / 60)
     const r = s % 60
     return `${m}:${r.toString().padStart(2, '0')}`
+  }
+
+  // Função para tocar som de beep
+  const tocarBeep = () => {
+    // Tentar primeiro com Web Audio API
+    if (audioContextRef.current) {
+      try {
+        const oscillator = audioContextRef.current.createOscillator()
+        const gainNode = audioContextRef.current.createGain()
+        
+        oscillator.connect(gainNode)
+        gainNode.connect(audioContextRef.current.destination)
+        
+        oscillator.frequency.value = 1000
+        oscillator.type = 'sine'
+        
+        gainNode.gain.setValueAtTime(0.5, audioContextRef.current.currentTime)
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContextRef.current.currentTime + 0.1)
+        
+        oscillator.start(audioContextRef.current.currentTime)
+        oscillator.stop(audioContextRef.current.currentTime + 0.1)
+        return
+      } catch (error) {
+        console.log('Web Audio API falhou, tentando HTML5 Audio:', error)
+      }
+    }
+    
+    // Fallback com HTML5 Audio
+    if (audioRef.current) {
+      try {
+        audioRef.current.currentTime = 0
+        audioRef.current.play().catch(err => console.log('Erro ao tocar áudio:', err))
+      } catch (error) {
+        console.log('HTML5 Audio também falhou:', error)
+      }
+    }
   }
 
   if (!chartConfig) return <div>Carregando...</div>
@@ -397,6 +450,9 @@ export default function Treinar() {
                   <Button onClick={reiniciar} variant="outline">
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Reiniciar
+                  </Button>
+                  <Button onClick={tocarBeep} variant="outline" size="sm">
+                    🔊 Testar Som
                   </Button>
                 </>
               ) : (
