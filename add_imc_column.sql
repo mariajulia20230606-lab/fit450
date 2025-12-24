@@ -1,0 +1,2 @@
+
+ALTER TABLE progresso_usuario ADD COLUMN IF NOT EXISTS imc DECIMAL(4,1);

@@ -1,0 +1,3 @@
+
+ALTER TABLE user_profiles ALTER COLUMN altura TYPE DECIMAL(5,2);
+ALTER TABLE progresso_usuario ALTER COLUMN altura TYPE DECIMAL(5,2);

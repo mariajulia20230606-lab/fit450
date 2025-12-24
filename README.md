@@ -1,36 +1,138 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FIT450 - Sistema 5BX
 
-## Getting Started
+Sistema de exercícios baseado no método 5BX (5 Basic Exercises) desenvolvido com Next.js, Supabase e TypeScript.
 
-First, run the development server:
+## 🚀 Tecnologias
+
+- **Frontend:** Next.js 15 com App Router
+- **Backend/Auth/DB:** Supabase
+- **Estilização:** Tailwind CSS
+- **Componentes UI:** Componentes customizados baseados em Radix UI
+- **Deploy:** Vercel
+
+## 📋 Funcionalidades
+
+- ✅ Autenticação completa (login/cadastro)
+- ✅ Dashboard personalizado
+- ✅ Sistema de exercícios 5BX
+- ✅ Progresso e estatísticas
+- ✅ Interface em Português (Brasil)
+
+## 🛠️ Configuração Local
+
+### 1. Clone o repositório
+
+```bash
+git clone https://github.com/seu-usuario/fit450.git
+cd fit450
+```
+
+### 2. Instale as dependências
+
+```bash
+npm install
+```
+
+### 3. Configure as variáveis de ambiente
+
+Crie um arquivo `.env.local` na raiz do projeto:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=sua_url_do_supabase
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_anon_key_do_supabase
+```
+
+### 4. Configure o Supabase
+
+1. Crie um projeto no [Supabase](https://supabase.com)
+2. Execute a migration SQL em `supabase/migrations/20241219000000_initial_schema.sql`
+3. Configure as políticas de segurança (RLS)
+4. Obtenha as chaves de API e configure no `.env.local`
+
+### 5. Execute o projeto
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📦 Deploy na Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Configure o repositório no GitHub
 
-## Learn More
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git branch -M main
+git remote add origin https://github.com/seu-usuario/fit450.git
+git push -u origin main
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Configure na Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Acesse [Vercel](https://vercel.com)
+2. Importe seu repositório do GitHub
+3. Configure as variáveis de ambiente
+4. Faça o deploy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🎯 Sistema 5BX
 
-## Deploy on Vercel
+O FIT450 implementa o sistema 5BX com 5 exercícios básicos:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. **Polichinelos** - Aquecimento cardiovascular
+2. **Abdominais** - Fortalecimento do core
+3. **Flexões** - Fortalecimento superior
+4. **Agachamentos** - Fortalecimento inferior
+5. **Corrida estacionária** - Cardiovascular final
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📁 Estrutura do Projeto
+
+```
+fit450/
+├── app/                    # Next.js App Router
+│   ├── dashboard/         # Páginas do dashboard
+│   ├── layout.tsx         # Layout principal
+│   └── page.tsx           # Página inicial
+├── components/            # Componentes React
+│   └── ui/               # Componentes UI
+├── hooks/                # Custom hooks
+│   └── use-auth.ts       # Hook de autenticação
+├── lib/                  # Utilitários e configurações
+│   ├── supabase.ts       # Configuração do Supabase
+│   └── utils.ts          # Utilitários
+├── middleware.ts         # Middleware de autenticação
+├── supabase/             # Configurações do Supabase
+│   └── migrations/       # Migrations SQL
+└── vercel.json           # Configuração do Vercel
+```
+
+## 🔒 Segurança
+
+- Row Level Security (RLS) configurado
+- Autenticação via Supabase Auth
+- Proteção de rotas com middleware
+- Variáveis de ambiente seguras
+
+## 🤝 Contribuindo
+
+1. Fork o projeto
+2. Crie sua feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📝 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+
+## 👥 Autor
+
+- **FIT450 Team** - Desenvolvimento inicial
+
+## 🙏 Agradecimentos
+
+- Sistema 5BX original
+- Comunidade Supabase
+- Next.js e Vercel
