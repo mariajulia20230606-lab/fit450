@@ -171,13 +171,13 @@ export default function Conquistas() {
 
         if (treinos) {
           const totalTreinos = treinos.length
-          const totalMinutos = Math.floor(treinos.reduce((acc, t) => acc + (t.tempo_total_segundos || 0), 0) / 60)
+          const totalMinutos = Math.floor(treinos.reduce((acc: number, t: any) => acc + (t.tempo_total_segundos || 0), 0) / 60)
           
           // Calcular Sequência (Streak)
           let currentStreak = 0
           if (treinos.length > 0) {
             // Usar Set para datas únicas
-            const uniqueDates = Array.from(new Set(treinos.map(t => t.data_treino.split('T')[0]))).sort().reverse()
+            const uniqueDates = Array.from(new Set(treinos.map((t: any) => t.data_treino.split('T')[0]))).sort().reverse()
             
             const hoje = new Date().toISOString().split('T')[0]
             const ontem = new Date(Date.now() - 86400000).toISOString().split('T')[0]
@@ -186,8 +186,8 @@ export default function Conquistas() {
             if (uniqueDates[0] === hoje || uniqueDates[0] === ontem) {
               currentStreak = 1
               for (let i = 0; i < uniqueDates.length - 1; i++) {
-                const d1 = new Date(uniqueDates[i])
-                const d2 = new Date(uniqueDates[i+1])
+                const d1 = new Date(uniqueDates[i] as string)
+                const d2 = new Date(uniqueDates[i+1] as string)
                 const diffTime = Math.abs(d1.getTime() - d2.getTime())
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
                 

@@ -12,13 +12,14 @@ export function useAuth() {
 
   useEffect(() => {
     // Verificar sessão atual
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
+    supabase.auth.getUser().then((response: any) => {
+      const { data } = response
+      setUser(data.user)
       setLoading(false)
     })
 
     // Escutar mudanças na autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       setUser(session?.user ?? null)
       setLoading(false)
     })

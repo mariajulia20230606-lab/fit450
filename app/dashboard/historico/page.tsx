@@ -66,7 +66,7 @@ export default function Historico() {
         if (error) throw error
 
         if (treinosData) {
-          const formattedTreinos: TreinoHistorico[] = treinosData.map(t => ({
+          const formattedTreinos: TreinoHistorico[] = treinosData.map((t: any) => ({
             id: t.id,
             data: t.data_treino,
             duracao: Math.round((t.tempo_total_segundos || 0) / 60),
