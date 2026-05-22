@@ -27,6 +27,7 @@ const createDummyClient = () => {
           single: () => Promise.resolve({ data: null, error: null }),
         }),
       }),
+      upsert: () => Promise.resolve({ data: null, error: null }),
       update: () => ({
         eq: () => ({
           select: () => ({

@@ -78,15 +78,17 @@ export default function Treinar() {
           // Não retornar erro fatal, usar defaults
         }
 
-        if (profile) {
-          const age = calculateAge(profile.data_nascimento)
-          setTargetLevelIndex(getTargetLevel(age))
-          
-          // Se nivel_atual_index for null, assume 0
-          setUserLevelIndex(profile.nivel_atual_index || 0)
-          setDaysAtLevel(profile.dias_no_nivel || 0)
-          setLastWorkoutDate(profile.ultimo_treino_data)
+        if (!profile) {
+          await supabase
+            .from('user_profiles')
+            .upsert({ id: user.id }, { onConflict: 'id' })
         }
+
+        const age = calculateAge(profile?.data_nascimento ?? null)
+        setTargetLevelIndex(getTargetLevel(age))
+        setUserLevelIndex(profile?.nivel_atual_index || 0)
+        setDaysAtLevel(profile?.dias_no_nivel || 0)
+        setLastWorkoutDate(profile?.ultimo_treino_data ?? null)
       } catch (err) {
         console.error('Erro:', err)
       } finally {
@@ -210,22 +212,29 @@ export default function Treinar() {
     // Salvar no Supabase
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      // Atualizar perfil
-      await supabase.from('user_profiles').update({
-        dias_no_nivel: newDays,
-        ultimo_treino_data: today
-      }).eq('id', user.id)
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: user.id,
+          dias_no_nivel: newDays,
+          ultimo_treino_data: today,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' })
+
+      if (profileError) console.error('Erro ao atualizar perfil:', profileError)
 
       // Registrar treino no histórico
       const tempoTotal = chartConfig.timings.reduce((acc, curr) => acc + curr, 0)
       
-      await supabase.from('treinos').insert({
+      const { error: treinoError } = await supabase.from('treinos').insert({
         user_id: user.id,
         data_treino: today,
         tempo_total_segundos: tempoTotal,
         completado: true
         // nivel_id: null // Deixando null pois não temos mapeamento direto com a tabela niveis antiga
       })
+
+      if (treinoError) console.error('Erro ao registrar treino:', treinoError)
     }
   }
 
@@ -241,10 +250,16 @@ export default function Treinar() {
     // Salvar no Supabase
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      await supabase.from('user_profiles').update({
-        nivel_atual_index: nextLevel,
-        dias_no_nivel: 0
-      }).eq('id', user.id)
+      const { error } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: user.id,
+          nivel_atual_index: nextLevel,
+          dias_no_nivel: 0,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' })
+
+      if (error) console.error('Erro ao avançar nível:', error)
     }
   }
 

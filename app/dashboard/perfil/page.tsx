@@ -20,6 +20,56 @@ export default function Perfil() {
     peso: 0,
     altura: 0
   })
+  const [dataNascimentoPartes, setDataNascimentoPartes] = useState({
+    dia: '',
+    mes: '',
+    ano: ''
+  })
+
+  const meses = [
+    { valor: '01', nome: 'Janeiro' },
+    { valor: '02', nome: 'Fevereiro' },
+    { valor: '03', nome: 'Março' },
+    { valor: '04', nome: 'Abril' },
+    { valor: '05', nome: 'Maio' },
+    { valor: '06', nome: 'Junho' },
+    { valor: '07', nome: 'Julho' },
+    { valor: '08', nome: 'Agosto' },
+    { valor: '09', nome: 'Setembro' },
+    { valor: '10', nome: 'Outubro' },
+    { valor: '11', nome: 'Novembro' },
+    { valor: '12', nome: 'Dezembro' }
+  ]
+
+  const anos = Array.from({ length: new Date().getFullYear() - 1900 + 1 }, (_, i) => `${new Date().getFullYear() - i}`)
+
+  const splitDataNascimento = (value: string) => {
+    const [ano = '', mes = '', dia = ''] = (value || '').split('-')
+    return { dia, mes, ano }
+  }
+
+  const diasNoMes = (ano: string, mes: string) => {
+    if (!ano || !mes) return 31
+    return new Date(Number(ano), Number(mes), 0).getDate()
+  }
+
+  const atualizarDataNascimento = (partes: { dia: string, mes: string, ano: string }) => {
+    const { dia, mes, ano } = partes
+    if (!dia || !mes || !ano) {
+      setDados(prev => ({ ...prev, dataNascimento: '' }))
+      return
+    }
+
+    const maxDias = diasNoMes(ano, mes)
+    const diaNum = Number(dia)
+    if (!Number.isFinite(diaNum) || diaNum < 1 || diaNum > maxDias) {
+      setDados(prev => ({ ...prev, dataNascimento: '' }))
+      return
+    }
+
+    const formatted = `${ano}-${mes}-${dia.toString().padStart(2, '0')}`
+    setDados(prev => ({ ...prev, dataNascimento: formatted }))
+  }
 
   useEffect(() => {
     async function loadProfile() {
@@ -38,7 +88,13 @@ export default function Perfil() {
 
         if (error) throw error
 
-        if (profile) {
+        if (!profile) {
+          await supabase
+            .from('user_profiles')
+            .upsert({ id: user.id }, { onConflict: 'id' })
+        } else {
+          const partes = splitDataNascimento(profile.data_nascimento || '')
+          setDataNascimentoPartes(partes)
           setDados({
             nome: profile.nome || '',
             dataNascimento: profile.data_nascimento || '',
@@ -64,6 +120,16 @@ export default function Perfil() {
     }))
   }
 
+  const handleDataNascimentoParteChange = (name: 'dia' | 'mes' | 'ano', value: string) => {
+    setDataNascimentoPartes(prev => {
+      const next = { ...prev, [name]: value }
+      const maxDias = diasNoMes(next.ano, next.mes)
+      if (next.dia && Number(next.dia) > maxDias) next.dia = ''
+      atualizarDataNascimento(next)
+      return next
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -72,17 +138,16 @@ export default function Perfil() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Usuário não autenticado')
 
-      // 1. Atualizar perfil
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .update({
+        .upsert({
+          id: user.id,
           nome: dados.nome,
           data_nascimento: dados.dataNascimento || null,
           peso: dados.peso,
           altura: dados.altura,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id)
+        }, { onConflict: 'id' })
 
       if (profileError) throw profileError
 
@@ -223,14 +288,42 @@ export default function Perfil() {
                       <Label htmlFor="dataNascimento">Data de Nascimento</Label>
                       <div className="relative">
                         <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <Input
-                          id="dataNascimento"
-                          name="dataNascimento"
-                          type="date"
-                          value={dados.dataNascimento}
-                          onChange={handleChange}
-                          className="pl-9"
-                        />
+                        <div className="grid grid-cols-3 gap-2">
+                          <select
+                            aria-label="Dia"
+                            value={dataNascimentoPartes.dia}
+                            onChange={(e) => handleDataNascimentoParteChange('dia', e.target.value)}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9"
+                          >
+                            <option value="">Dia</option>
+                            {Array.from({ length: diasNoMes(dataNascimentoPartes.ano, dataNascimentoPartes.mes) }, (_, i) => {
+                              const d = `${i + 1}`.padStart(2, '0')
+                              return <option key={d} value={d}>{d}</option>
+                            })}
+                          </select>
+                          <select
+                            aria-label="Mês"
+                            value={dataNascimentoPartes.mes}
+                            onChange={(e) => handleDataNascimentoParteChange('mes', e.target.value)}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <option value="">Mês</option>
+                            {meses.map((m) => (
+                              <option key={m.valor} value={m.valor}>{m.nome}</option>
+                            ))}
+                          </select>
+                          <select
+                            aria-label="Ano"
+                            value={dataNascimentoPartes.ano}
+                            onChange={(e) => handleDataNascimentoParteChange('ano', e.target.value)}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <option value="">Ano</option>
+                            {anos.map((a) => (
+                              <option key={a} value={a}>{a}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                     </div>
 
