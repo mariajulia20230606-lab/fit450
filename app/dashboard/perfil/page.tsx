@@ -14,6 +14,7 @@ export default function Perfil() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [resettingTreinos, setResettingTreinos] = useState(false)
   const [dados, setDados] = useState({
     nome: '',
     dataNascimento: '',
@@ -175,6 +176,59 @@ export default function Perfil() {
       alert('Erro ao salvar perfil. Tente novamente.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const resetarTreinos = async () => {
+    const confirmado = window.confirm('Isso vai apagar seu histórico de treinos e exercícios. Deseja continuar?')
+    if (!confirmado) return
+
+    setResettingTreinos(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuário não autenticado')
+
+      const { data: treinosData, error: treinosError } = await supabase
+        .from('treinos')
+        .select('id')
+        .eq('user_id', user.id)
+
+      if (treinosError) throw treinosError
+
+      const treinoIds = (treinosData ?? []).map((t: { id: number }) => t.id)
+      if (treinoIds.length > 0) {
+        const { error: detalhesError } = await supabase
+          .from('treino_exercicios')
+          .delete()
+          .in('treino_id', treinoIds)
+
+        if (detalhesError) throw detalhesError
+      }
+
+      const { error: deleteTreinosError } = await supabase
+        .from('treinos')
+        .delete()
+        .eq('user_id', user.id)
+
+      if (deleteTreinosError) throw deleteTreinosError
+
+      const { error: resetPerfilError } = await supabase
+        .from('user_profiles')
+        .update({
+          dias_no_nivel: 0,
+          ultimo_treino_data: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+
+      if (resetPerfilError) throw resetPerfilError
+
+      alert('Treinos apagados. Você pode começar do zero.')
+    } catch (error) {
+      console.error('Erro ao resetar treinos:', error)
+      alert('Não foi possível apagar os treinos. Tente novamente.')
+    } finally {
+      setResettingTreinos(false)
     }
   }
 
@@ -382,6 +436,22 @@ export default function Perfil() {
                           Salvar Alterações
                         </span>
                       )}
+                    </Button>
+                  </div>
+
+                  <div className="border border-red-200 bg-red-50 text-red-900 rounded-lg p-4">
+                    <div className="font-semibold mb-1">Resetar treinos</div>
+                    <div className="text-sm text-red-800 mb-3">
+                      Apaga seu histórico de treinos e exercícios registrados. Essa ação não pode ser desfeita.
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={resetarTreinos}
+                      disabled={resettingTreinos}
+                      className="w-full md:w-auto"
+                    >
+                      {resettingTreinos ? 'Apagando...' : 'Apagar meus treinos'}
                     </Button>
                   </div>
                 </form>
