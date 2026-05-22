@@ -1,12 +1,93 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dumbbell, Calendar, TrendingUp, Trophy, Clock, Target } from 'lucide-react'
 import DashboardLayout from '@/components/dashboard-layout'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
+import { getLevelByIndex } from '@/lib/5bx-logic'
 
 export default function Dashboard() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [treinosHoje, setTreinosHoje] = useState(0)
+  const [streakDias, setStreakDias] = useState(0)
+  const [nivelAtualLabel, setNivelAtualLabel] = useState('Iniciante')
+  const [tempoTotalMin, setTempoTotalMin] = useState(0)
+
+  const hojeStr = useMemo(() => new Date().toISOString().split('T')[0], [])
+
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          router.push('/')
+          return
+        }
+
+        const [{ data: profile }, { data: treinosData }] = await Promise.all([
+          supabase
+            .from('user_profiles')
+            .select('nivel_atual_index, dias_no_nivel')
+            .eq('id', user.id)
+            .maybeSingle(),
+          supabase
+            .from('treinos')
+            .select('data_treino, tempo_total_segundos, completado')
+            .eq('user_id', user.id)
+            .eq('completado', true)
+            .order('data_treino', { ascending: false })
+        ])
+
+        if (profile) {
+          const levelConfig = getLevelByIndex(profile.nivel_atual_index || 0)
+          setNivelAtualLabel(`Chart ${levelConfig.chart} - ${levelConfig.level}${levelConfig.subLevel}`)
+        } else {
+          setNivelAtualLabel('Iniciante')
+        }
+
+        const treinos = (treinosData as Array<{ data_treino: string, tempo_total_segundos: number | null, completado: boolean | null }>) || []
+
+        setTreinosHoje(treinos.filter(t => t.data_treino === hojeStr).length)
+
+        const totalSegundos = treinos.reduce((acc, t) => acc + (t.tempo_total_segundos || 0), 0)
+        setTempoTotalMin(Math.floor(totalSegundos / 60))
+
+        let streak = 0
+        if (treinos.length > 0) {
+          const uniqueDates = Array.from(new Set(treinos.map(t => t.data_treino))).sort().reverse()
+          const today = hojeStr
+          const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+
+          if (uniqueDates[0] === today || uniqueDates[0] === yesterday) {
+            streak = 1
+            for (let i = 0; i < uniqueDates.length - 1; i++) {
+              const d1 = new Date(uniqueDates[i] + 'T12:00:00')
+              const d2 = new Date(uniqueDates[i + 1] + 'T12:00:00')
+              const diffTime = Math.abs(d1.getTime() - d2.getTime())
+              const diffDays = Math.ceil(diffTime / 86400000)
+
+              if (diffDays === 1) {
+                streak++
+              } else {
+                break
+              }
+            }
+          }
+        }
+        setStreakDias(streak)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboard()
+  }, [router, hojeStr])
+
   return (
     <DashboardLayout>
       <div className="p-6">
@@ -23,7 +104,7 @@ export default function Dashboard() {
               <Calendar className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-900">0</div>
+              <div className="text-2xl font-bold text-blue-900">{loading ? '...' : treinosHoje}</div>
               <p className="text-xs text-blue-700">Complete seu treino diário</p>
             </CardContent>
           </Card>
@@ -34,7 +115,7 @@ export default function Dashboard() {
               <TrendingUp className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-900">0 dias</div>
+              <div className="text-2xl font-bold text-green-900">{loading ? '...' : `${streakDias} dias`}</div>
               <p className="text-xs text-green-700">Mantenha a consistência</p>
             </CardContent>
           </Card>
@@ -45,7 +126,7 @@ export default function Dashboard() {
               <Trophy className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-900">Iniciante</div>
+              <div className="text-2xl font-bold text-purple-900">{loading ? '...' : nivelAtualLabel}</div>
               <p className="text-xs text-purple-700">Comece sua jornada</p>
             </CardContent>
           </Card>
@@ -56,7 +137,7 @@ export default function Dashboard() {
               <Clock className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-900">0 min</div>
+              <div className="text-2xl font-bold text-orange-900">{loading ? '...' : `${tempoTotalMin} min`}</div>
               <p className="text-xs text-orange-700">Tempo de exercício</p>
             </CardContent>
           </Card>
