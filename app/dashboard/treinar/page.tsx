@@ -226,15 +226,41 @@ export default function Treinar() {
       // Registrar treino no histórico
       const tempoTotal = chartConfig.timings.reduce((acc, curr) => acc + curr, 0)
       
-      const { error: treinoError } = await supabase.from('treinos').insert({
-        user_id: user.id,
-        data_treino: today,
-        tempo_total_segundos: tempoTotal,
-        completado: true
-        // nivel_id: null // Deixando null pois não temos mapeamento direto com a tabela niveis antiga
+      const { data: treinoInserido, error: treinoError } = await supabase
+        .from('treinos')
+        .insert({
+          user_id: user.id,
+          data_treino: today,
+          tempo_total_segundos: tempoTotal,
+          completado: true
+        })
+        .select('id')
+        .single()
+
+      if (treinoError || !treinoInserido) {
+        console.error('Erro ao registrar treino:', treinoError)
+        return
+      }
+
+      const detalhes = chartConfig.exercises.map((ex, idx) => {
+        const exercicioId = ex.id
+        const repeticoesRealizadas = reps?.[idx] ?? 0
+        const tempoSegundos = chartConfig.timings[idx] ?? null
+
+        return {
+          treino_id: treinoInserido.id,
+          exercicio_id: exercicioId,
+          repeticoes_realizadas: repeticoesRealizadas,
+          tempo_segundos: tempoSegundos,
+          completado: true
+        }
       })
 
-      if (treinoError) console.error('Erro ao registrar treino:', treinoError)
+      const { error: detalhesError } = await supabase
+        .from('treino_exercicios')
+        .insert(detalhes)
+
+      if (detalhesError) console.error('Erro ao registrar exercícios do treino:', detalhesError)
     }
   }
 

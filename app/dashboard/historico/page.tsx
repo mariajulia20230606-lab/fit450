@@ -66,15 +66,59 @@ export default function Historico() {
         if (error) throw error
 
         if (treinosData) {
-          const formattedTreinos: TreinoHistorico[] = treinosData.map((t: any) => ({
+          const treinosBase: TreinoHistorico[] = (treinosData as Array<{
+            id: number
+            data_treino: string
+            tempo_total_segundos: number | null
+            completado: boolean | null
+          }>).map((t) => ({
             id: t.id,
             data: t.data_treino,
             duracao: Math.round((t.tempo_total_segundos || 0) / 60),
             nivel: 'Geral', // Como não salvamos o nível histórico ainda, usamos um placeholder
-            completado: t.completado,
-            exercicios: [] // Não temos detalhes dos exercícios por enquanto
+            completado: !!t.completado,
+            exercicios: []
           }))
-          setHistorico(formattedTreinos)
+
+          const treinoIds = treinosBase.filter(t => t.completado).map(t => t.id)
+          if (treinoIds.length === 0) {
+            setHistorico(treinosBase)
+            return
+          }
+
+          const { data: detalhesData, error: detalhesError } = await supabase
+            .from('treino_exercicios')
+            .select('treino_id, repeticoes_realizadas, tempo_segundos, exercicios(nome)')
+            .in('treino_id', treinoIds)
+
+          if (detalhesError) {
+            console.error('Erro ao carregar exercícios do treino:', detalhesError)
+            setHistorico(treinosBase)
+            return
+          }
+
+          const porTreino = new Map<number, ExercicioHistorico[]>()
+          ;(detalhesData as Array<{
+            treino_id: number
+            repeticoes_realizadas: number
+            tempo_segundos: number | null
+            exercicios: { nome: string } | null
+          }> | null)?.forEach((d) => {
+            const list = porTreino.get(d.treino_id) ?? []
+            list.push({
+              nome: d.exercicios?.nome ?? 'Exercício',
+              repeticoes: d.repeticoes_realizadas ?? 0,
+              duracao: d.tempo_segundos ?? 0
+            })
+            porTreino.set(d.treino_id, list)
+          })
+
+          setHistorico(
+            treinosBase.map((t) => ({
+              ...t,
+              exercicios: porTreino.get(t.id) ?? []
+            }))
+          )
         }
       } catch (error) {
         console.error('Erro ao carregar histórico:', error)
